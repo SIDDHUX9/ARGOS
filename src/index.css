@@ -1,0 +1,207 @@
+/* DO NOT CHANGE */
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+
+/* DO NOT CHANGE */
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ARGOS — Military-Grade Financial Terminal */
+:root {
+  --radius: 0.25rem;
+  --background: #050507;
+  --foreground: #e8e8ed;
+  --card: #0a0a10;
+  --card-foreground: #e8e8ed;
+  --popover: #0a0a10;
+  --popover-foreground: #e8e8ed;
+  --primary: #00f0ff;
+  --primary-foreground: #050507;
+  --secondary: #111118;
+  --secondary-foreground: #e8e8ed;
+  --muted: #111118;
+  --muted-foreground: #6b7280;
+  --accent: #111118;
+  --accent-foreground: #00f0ff;
+  --destructive: #ff453a;
+  --border: #1e1e2e;
+  --input: #0a0a10;
+  --ring: #00f0ff;
+  --chart-1: #00f0ff;
+  --chart-2: #30d158;
+  --chart-3: #ff9f0a;
+  --chart-4: #ff453a;
+  --chart-5: #bf5af2;
+  --sidebar: #0a0a10;
+  --sidebar-foreground: #e8e8ed;
+  --sidebar-primary: #00f0ff;
+  --sidebar-primary-foreground: #050507;
+  --sidebar-accent: #111118;
+  --sidebar-accent-foreground: #e8e8ed;
+  --sidebar-border: #1e1e2e;
+  --sidebar-ring: #00f0ff;
+}
+
+.dark {
+  --background: #050507;
+  --foreground: #e8e8ed;
+  --card: #0a0a10;
+  --card-foreground: #e8e8ed;
+  --popover: #0a0a10;
+  --popover-foreground: #e8e8ed;
+  --primary: #00f0ff;
+  --primary-foreground: #050507;
+  --secondary: #111118;
+  --secondary-foreground: #e8e8ed;
+  --muted: #111118;
+  --muted-foreground: #6b7280;
+  --accent: #111118;
+  --accent-foreground: #00f0ff;
+  --destructive: #ff453a;
+  --border: #1e1e2e;
+  --input: #0a0a10;
+  --ring: #00f0ff;
+  --chart-1: #00f0ff;
+  --chart-2: #30d158;
+  --chart-3: #ff9f0a;
+  --chart-4: #ff453a;
+  --chart-5: #bf5af2;
+  --sidebar: #0a0a10;
+  --sidebar-foreground: #e8e8ed;
+  --sidebar-primary: #00f0ff;
+  --sidebar-primary-foreground: #050507;
+  --sidebar-accent: #111118;
+  --sidebar-accent-foreground: #e8e8ed;
+  --sidebar-border: #1e1e2e;
+  --sidebar-ring: #00f0ff;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', 'SF Pro Text', system-ui, sans-serif;
+    font-size: 14px;
+  }
+  .font-mono, code, pre {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  }
+  button:not([disabled]),
+  [role="button"]:not([disabled]) {
+    cursor: pointer;
+  }
+}
+
+/* Terminal utilities */
+.terminal-panel {
+  background: #0a0a10;
+  border: 1px solid #1e1e2e;
+}
+.terminal-panel-inner {
+  background: #111118;
+  border: 1px solid #1e1e2e;
+}
+
+/* Pulse animations */
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-live {
+  animation: pulse-live 2s ease-in-out infinite;
+}
+
+@keyframes pulse-amber {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-amber {
+  animation: pulse-amber 1.5s ease-in-out infinite;
+}
+
+/* Ticker */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: ticker-scroll 50s linear infinite;
+}
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* Row flash on update */
+@keyframes row-flash {
+  0% { background-color: rgba(0,240,255,0.08); }
+  100% { background-color: transparent; }
+}
+.row-flash {
+  animation: row-flash 0.8s ease-out;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: #050507; }
+::-webkit-scrollbar-thumb { background: #1e1e2e; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,240,255,0.2); }
+
+/* Blinking cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.cursor-blink::after {
+  content: '▋';
+  animation: blink 1s step-end infinite;
+  color: #00f0ff;
+  margin-left: 2px;
+}
+
+/* Glass card */
+.glass-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+}
