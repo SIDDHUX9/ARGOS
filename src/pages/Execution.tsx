@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, TrendingUp, TrendingDown } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
 import { AppLayout } from '@/components/argos/AppLayout';
 import { MOCK_TRADES, MOCK_ASSETS, generateOrderbook, formatTimestamp } from '@/lib/argos-mock';
 import type { Trade } from '@/lib/argos-types';
@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
+import { sepolia } from 'wagmi/chains';
 
 const PAIRS = ['BTC/USDC', 'ETH/USDC', 'COPPER/USDC', 'GOLD/USDC', 'OIL/USDC', 'SPX/USDC'];
 const PAIR_PRICES: Record<string, number> = {
@@ -19,7 +21,35 @@ const PAIR_PRICES: Record<string, number> = {
   'SPX/USDC': 5231,
 };
 
+// ArgosVault ABI — only the functions we call
+const VAULT_ABI = [
+  {
+    name: 'recordTrade',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      {
+        name: 'input',
+        type: 'tuple',
+        components: [
+          { name: 'pair',        type: 'string'  },
+          { name: 'side',        type: 'string'  },
+          { name: 'amount',      type: 'uint256' },
+          { name: 'price',       type: 'uint256' },
+          { name: 'execPrice',   type: 'uint256' },
+          { name: 'slippageBps', type: 'int256'  },
+          { name: 'status',      type: 'string'  },
+        ],
+      },
+    ],
+    outputs: [{ name: 'id', type: 'uint256' }],
+  },
+] as const;
+
+const VAULT_ADDRESS = import.meta.env.VITE_ARGOS_VAULT_ADDRESS as `0x${string}` | undefined;
+
 export default function Execution() {
+  const { isConnected } = useAccount();
   const [trades, setTrades] = useState<Trade[]>(MOCK_TRADES);
   const [pair, setPair] = useState('BTC/USDC');
   const [side, setSide] = useState<'Buy' | 'Sell'>('Buy');
@@ -27,8 +57,12 @@ export default function Execution() {
   const [amount, setAmount] = useState('');
   const [price, setPrice] = useState('');
   const [executing, setExecuting] = useState(false);
+  const [pendingTrade, setPendingTrade] = useState<Trade | null>(null);
   const [autoEnabled, setAutoEnabled] = useState<Record<string, boolean>>({ 'Copper Supply Shock Index': true });
   const [orderbook, setOrderbook] = useState(generateOrderbook(PAIR_PRICES[pair]));
+
+  const { writeContract, data: txHash, isPending: isTxPending } = useWriteContract();
+  const { isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({ hash: txHash, chainId: sepolia.id });
 
   useEffect(() => {
     const midPrice = PAIR_PRICES[pair] || 100;
@@ -39,44 +73,120 @@ export default function Execution() {
     return () => clearInterval(interval);
   }, [pair]);
 
+  // When on-chain tx confirms, finalize the trade
+  useEffect(() => {
+    if (isTxConfirmed && txHash && pendingTrade) {
+      const confirmedTrade: Trade = {
+        ...pendingTrade,
+        hash: txHash,
+        status: 'Filled',
+      };
+      setTrades(prev => [confirmedTrade, ...prev]);
+      setPendingTrade(null);
+      setExecuting(false);
+      toast.success('Trade confirmed on-chain', {
+        description: (
+          <a
+            href={`https://sepolia.etherscan.io/tx/${txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 underline"
+          >
+            View on Etherscan <ExternalLink className="w-3 h-3" />
+          </a>
+        ) as unknown as string,
+      });
+    }
+  }, [isTxConfirmed, txHash, pendingTrade]);
+
   const handleExecute = async () => {
     if (!amount) { toast.error('Enter an amount'); return; }
     setExecuting(true);
-    toast.info('Submitting order to SoDEX...', { description: `${side} ${amount} ${pair}` });
-    await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
 
     const midPrice = PAIR_PRICES[pair] || 100;
     const slippage = (Math.random() - 0.3) * 0.5;
     const execPrice = midPrice * (1 + slippage / 100);
+    const slippageBps = Math.round(slippage * 100);
+    const status = Math.random() > 0.2 ? 'Filled' : 'Partial';
 
     const newTrade: Trade = {
       id: `t${Date.now()}`,
-      hash: `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`,
+      hash: txHash ?? `0x${Math.random().toString(16).slice(2, 10)}...${Math.random().toString(16).slice(2, 6)}`,
       pair,
       side,
       amount: parseFloat(amount),
       price: orderType === 'Market' ? midPrice : parseFloat(price) || midPrice,
       executionPrice: parseFloat(execPrice.toFixed(2)),
       slippage: parseFloat(slippage.toFixed(3)),
-      status: Math.random() > 0.2 ? 'Filled' : 'Partial',
+      status,
       timestamp: new Date(),
       triggeredBy: 'Manual',
     };
 
+    // Try on-chain recording if vault address is configured
+    if (VAULT_ADDRESS && isConnected) {
+      try {
+        toast.info('Recording trade on-chain...', { description: `${side} ${amount} ${pair}` });
+        setPendingTrade(newTrade);
+        writeContract({
+          address: VAULT_ADDRESS,
+          abi: VAULT_ABI,
+          functionName: 'recordTrade',
+          chainId: sepolia.id,
+          args: [{
+            pair,
+            side,
+            amount: BigInt(Math.round(parseFloat(amount) * 1e8)),
+            price: BigInt(Math.round(midPrice * 1e8)),
+            execPrice: BigInt(Math.round(execPrice * 1e8)),
+            slippageBps: BigInt(slippageBps),
+            status,
+          }],
+        });
+        // Don't add to local state yet — wait for confirmation
+        setAmount('');
+        return;
+      } catch (err) {
+        console.warn('On-chain recording failed, falling back to local:', err);
+        setPendingTrade(null);
+      }
+    }
+
+    // Fallback: local simulation
+    await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
     setTrades(prev => [newTrade, ...prev]);
     setExecuting(false);
     setAmount('');
-    toast.success(`Order ${newTrade.status}`, { description: `${side} ${amount} ${pair} @ ${execPrice.toFixed(2)}` });
+    toast.success(`Order ${status}`, { description: `${side} ${amount} ${pair} @ ${execPrice.toFixed(2)}` });
   };
 
   const midPrice = PAIR_PRICES[pair] || 100;
+  const isOnChain = !!VAULT_ADDRESS;
 
   return (
     <AppLayout>
       <div className="p-4 lg:p-6 space-y-6">
-        <div>
-          <h1 className="font-mono font-bold text-xl text-foreground">Execution Terminal</h1>
-          <p className="text-xs text-muted-foreground font-mono mt-0.5">SoDEX orderbook interface and trade management</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-mono font-bold text-xl text-foreground">Execution Terminal</h1>
+            <p className="text-xs text-muted-foreground font-mono mt-0.5">SoDEX orderbook interface and trade management</p>
+          </div>
+          {isOnChain && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded" style={{ border: '1px solid rgba(48,209,88,0.3)', background: 'rgba(48,209,88,0.06)' }}>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#30d158' }} />
+              <span className="font-mono text-xs" style={{ color: '#30d158' }}>ON-CHAIN</span>
+              <a
+                href={`https://sepolia.etherscan.io/address/${VAULT_ADDRESS}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-[10px] flex items-center gap-1"
+                style={{ color: 'rgba(48,209,88,0.6)' }}
+              >
+                <ExternalLink className="w-3 h-3" />
+                {VAULT_ADDRESS?.slice(0, 6)}...{VAULT_ADDRESS?.slice(-4)}
+              </a>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -161,15 +271,21 @@ export default function Execution() {
                 <span className="text-muted-foreground">Est. Slippage</span>
                 <span style={{ color: '#f59e0b' }}>~0.1-0.3%</span>
               </div>
+              {isOnChain && (
+                <div className="flex justify-between text-xs font-mono mt-1">
+                  <span className="text-muted-foreground">Recording</span>
+                  <span style={{ color: '#30d158' }}>On-chain ✓</span>
+                </div>
+              )}
             </div>
 
             <Button
               onClick={handleExecute}
-              disabled={executing || !amount}
+              disabled={executing || isTxPending || !amount}
               className="w-full font-mono font-bold"
               style={{ background: side === 'Buy' ? '#10b981' : '#e53e3e', color: 'white' }}
             >
-              {executing ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Executing...</> : `${side} ${pair}`}
+              {(executing || isTxPending) ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> {isTxPending ? 'Confirm in wallet...' : 'Executing...'}</> : `${side} ${pair}`}
             </Button>
           </div>
 
@@ -235,6 +351,33 @@ export default function Execution() {
                 ))}
               </div>
             </div>
+
+            {/* On-chain contract info */}
+            {isOnChain && (
+              <div className="rounded-lg border border-border/50 p-4" style={{ background: '#0f1420' }}>
+                <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-3">Contract Info</p>
+                <div className="space-y-2">
+                  {[
+                    { label: 'ArgosVault', addr: import.meta.env.VITE_ARGOS_VAULT_ADDRESS },
+                    { label: 'ArgosAudit', addr: import.meta.env.VITE_ARGOS_AUDIT_ADDRESS },
+                  ].map(({ label, addr }) => addr && (
+                    <div key={label} className="flex items-center justify-between">
+                      <span className="font-mono text-xs text-muted-foreground">{label}</span>
+                      <a
+                        href={`https://sepolia.etherscan.io/address/${addr}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-xs flex items-center gap-1"
+                        style={{ color: '#00d4ff' }}
+                      >
+                        {(addr as string).slice(0, 6)}...{(addr as string).slice(-4)}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -259,7 +402,22 @@ export default function Execution() {
                     transition={{ delay: i * 0.03 }}
                     className="border-b border-border/20 hover:bg-accent/20 transition-colors"
                   >
-                    <td className="px-3 py-2.5 font-mono text-muted-foreground">{trade.hash}</td>
+                    <td className="px-3 py-2.5 font-mono text-muted-foreground">
+                      {trade.hash.startsWith('0x') && trade.hash.length > 20 ? (
+                        <a
+                          href={`https://sepolia.etherscan.io/tx/${trade.hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 hover:text-foreground transition-colors"
+                          style={{ color: '#00d4ff' }}
+                        >
+                          {trade.hash.slice(0, 8)}...{trade.hash.slice(-6)}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ) : (
+                        trade.hash
+                      )}
+                    </td>
                     <td className="px-3 py-2.5 font-mono font-bold text-foreground">{trade.pair}</td>
                     <td className="px-3 py-2.5">
                       <span className="font-mono font-bold" style={{ color: trade.side === 'Buy' ? '#10b981' : '#e53e3e' }}>

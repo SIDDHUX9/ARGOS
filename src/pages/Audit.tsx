@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, ChevronDown, ChevronUp, ExternalLink, QrCode } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { AppLayout } from '@/components/argos/AppLayout';
 import { MOCK_AUDIT, MOCK_TRADES, formatTimestamp } from '@/lib/argos-mock';
 import type { AuditEntry } from '@/lib/argos-types';
+
+const AUDIT_ADDRESS = import.meta.env.VITE_ARGOS_AUDIT_ADDRESS as string | undefined;
+const VAULT_ADDRESS = import.meta.env.VITE_ARGOS_VAULT_ADDRESS as string | undefined;
 
 const EVENT_COLORS: Record<AuditEntry['eventType'], string> = {
   'News Processed': '#00d4ff',
@@ -13,6 +16,18 @@ const EVENT_COLORS: Record<AuditEntry['eventType'], string> = {
   'Guardian Intervention': '#e53e3e',
   'Rebalance': '#f97316',
 };
+
+function etherscanTxUrl(hash: string): string {
+  // If it looks like a real tx hash (66 chars), link to Sepolia
+  if (hash.startsWith('0x') && hash.length === 66) {
+    return `https://sepolia.etherscan.io/tx/${hash}`;
+  }
+  // Otherwise link to the audit contract
+  if (AUDIT_ADDRESS) {
+    return `https://sepolia.etherscan.io/address/${AUDIT_ADDRESS}`;
+  }
+  return `https://sepolia.etherscan.io`;
+}
 
 function AuditCard({ entry }: { entry: AuditEntry }) {
   const [expanded, setExpanded] = useState(false);
@@ -62,14 +77,27 @@ function AuditCard({ entry }: { entry: AuditEntry }) {
                     {JSON.stringify(entry.details, null, 2)}
                   </pre>
                 </div>
-                <div className="flex items-center gap-3">
-                  <button
+                <div className="flex items-center gap-3 flex-wrap">
+                  <a
+                    href={etherscanTxUrl(entry.hash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all hover:bg-primary/20"
                     style={{ color: '#00d4ff', border: '1px solid rgba(0,212,255,0.2)' }}
-                    onClick={() => window.open(`https://etherscan.io/tx/${entry.hash}`, '_blank')}
                   >
                     <ExternalLink className="w-3 h-3" /> Verify On-Chain
-                  </button>
+                  </a>
+                  {AUDIT_ADDRESS && (
+                    <a
+                      href={`https://sepolia.etherscan.io/address/${AUDIT_ADDRESS}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all hover:bg-primary/20"
+                      style={{ color: '#6b7280', border: '1px solid rgba(107,114,128,0.2)' }}
+                    >
+                      <ExternalLink className="w-3 h-3" /> ArgosAudit Contract
+                    </a>
+                  )}
                   <span className="text-xs font-mono text-muted-foreground">Hash: {entry.hash}</span>
                 </div>
               </div>
@@ -82,6 +110,7 @@ function AuditCard({ entry }: { entry: AuditEntry }) {
 }
 
 function TradeReceipt({ trade }: { trade: typeof MOCK_TRADES[0] }) {
+  const isRealHash = trade.hash.startsWith('0x') && trade.hash.length === 66;
   return (
     <div className="p-4 rounded-lg border border-border/50" style={{ background: '#0f1420', borderColor: trade.side === 'Buy' ? 'rgba(16,185,129,0.2)' : 'rgba(229,62,62,0.2)' }}>
       <div className="flex items-start justify-between mb-4">
@@ -115,13 +144,17 @@ function TradeReceipt({ trade }: { trade: typeof MOCK_TRADES[0] }) {
       </div>
       <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between">
         <p className="text-xs font-mono text-muted-foreground truncate">{trade.hash}</p>
-        <button
-          className="flex items-center gap-1 text-xs font-mono transition-colors hover:text-foreground"
+        <a
+          href={isRealHash
+            ? `https://sepolia.etherscan.io/tx/${trade.hash}`
+            : VAULT_ADDRESS ? `https://sepolia.etherscan.io/address/${VAULT_ADDRESS}` : '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-xs font-mono transition-colors hover:text-foreground flex-shrink-0 ml-2"
           style={{ color: '#00d4ff' }}
-          onClick={() => window.open(`https://etherscan.io/tx/${trade.hash}`, '_blank')}
         >
-          <ExternalLink className="w-3 h-3" /> View
-        </button>
+          <ExternalLink className="w-3 h-3" /> {isRealHash ? 'View Tx' : 'View Contract'}
+        </a>
       </div>
     </div>
   );
@@ -136,12 +169,32 @@ export default function Audit() {
   return (
     <AppLayout>
       <div className="p-4 lg:p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <FileText className="w-6 h-6" style={{ color: '#00d4ff' }} />
-          <div>
-            <h1 className="font-mono font-bold text-xl text-foreground">Audit Trail</h1>
-            <p className="text-xs text-muted-foreground font-mono mt-0.5">Immutable on-chain attestation log</p>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <FileText className="w-6 h-6" style={{ color: '#00d4ff' }} />
+            <div>
+              <h1 className="font-mono font-bold text-xl text-foreground">Audit Trail</h1>
+              <p className="text-xs text-muted-foreground font-mono mt-0.5">Immutable on-chain attestation log</p>
+            </div>
           </div>
+          {AUDIT_ADDRESS && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded" style={{ border: '1px solid rgba(0,212,255,0.3)', background: 'rgba(0,212,255,0.06)' }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#00d4ff' }} />
+                <span className="font-mono text-xs" style={{ color: '#00d4ff' }}>ATTESTING ON-CHAIN</span>
+              </div>
+              <a
+                href={`https://sepolia.etherscan.io/address/${AUDIT_ADDRESS}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 font-mono text-xs"
+                style={{ color: 'rgba(0,212,255,0.6)' }}
+              >
+                <ExternalLink className="w-3 h-3" />
+                {AUDIT_ADDRESS.slice(0, 6)}...{AUDIT_ADDRESS.slice(-4)}
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Stats */}

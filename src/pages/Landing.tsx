@@ -646,18 +646,10 @@ function ExecutionSection({ prices }: { prices: Map<string, PriceState> }) {
 
 // ─── Main Landing ─────────────────────────────────────────────────────────────
 export default function Landing() {
-  const { isConnected, isReconnecting } = useAccount();
+  const { isConnected } = useAccount();
   const navigate = useNavigate();
-  const prevIsConnected = useRef(isConnected);
   const [prices, setPrices] = useState<Map<string, PriceState>>(priceEngine.getAllStates());
   const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    if (isConnected && !prevIsConnected.current && !isReconnecting) {
-      navigate('/dashboard');
-    }
-    prevIsConnected.current = isConnected;
-  }, [isConnected, isReconnecting, navigate]);
 
   useEffect(() => {
     setMounted(true);
@@ -717,18 +709,19 @@ export default function Landing() {
             <span className="w-1.5 h-1.5 rounded-full pulse-live" style={{ background: '#30d158' }} />
             <span className="font-mono text-xs" style={{ color: '#30d158' }}>LIVE</span>
           </div>
-          {isConnected && (
+          {isConnected ? (
             <button
               onClick={() => navigate('/dashboard')}
-              className="font-mono text-xs px-4 py-1.5 transition-all"
-              style={{ border: '1px solid #bf5af2', color: '#bf5af2', background: 'transparent' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(191,90,242,0.08)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              className="flex items-center gap-2 px-4 py-1.5 font-mono text-xs font-bold transition-all"
+              style={{ background: 'rgba(0,240,255,0.1)', border: '1px solid rgba(0,240,255,0.3)', color: '#00f0ff', borderRadius: 4 }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,240,255,0.2)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,240,255,0.1)'; }}
             >
-              [ Dashboard ]
+              War Room →
             </button>
+          ) : (
+            <WalletConnect />
           )}
-          <WalletConnect />
         </div>
       </nav>
 
@@ -778,12 +771,12 @@ export default function Landing() {
             {isConnected ? (
               <button
                 onClick={() => navigate('/dashboard')}
-                className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium transition-all"
-                style={{ background: 'rgba(0,240,255,0.08)', border: '1px solid #00f0ff', color: '#00f0ff', borderRadius: 6 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,240,255,0.15)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,240,255,0.08)'; }}
+                className="flex items-center gap-2 px-8 py-3 font-mono text-sm font-bold transition-all"
+                style={{ background: '#00f0ff', color: '#000000', borderRadius: 6 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#00d4e0'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#00f0ff'; }}
               >
-                Go to Dashboard <ArrowRight className="w-4 h-4" />
+                Enter War Room →
               </button>
             ) : (
               <WalletConnect />
@@ -910,20 +903,22 @@ export default function Landing() {
                 {isConnected ? (
                   <button
                     onClick={() => navigate('/dashboard')}
-                    className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium transition-all"
-                    style={{ background: 'rgba(0,240,255,0.08)', border: '1px solid #00f0ff', color: '#00f0ff', borderRadius: 6 }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,240,255,0.15)'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,240,255,0.08)'; }}
+                    className="flex items-center gap-2 px-6 py-3 font-mono text-sm font-bold transition-all"
+                    style={{ background: '#00f0ff', color: '#000000', borderRadius: 6 }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#00d4e0'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#00f0ff'; }}
                   >
-                    Go to Dashboard <ArrowRight className="w-4 h-4" />
+                    Enter War Room →
                   </button>
                 ) : (
                   <WalletConnect />
                 )}
-                <div className="flex items-center gap-2">
-                  <Lock className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.3)' }} />
-                  <span className="font-mono text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>EVM wallet required</span>
-                </div>
+                {!isConnected && (
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.3)' }} />
+                    <span className="font-mono text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>EVM wallet required</span>
+                  </div>
+                )}
               </div>
             </motion.div>
             <motion.div
