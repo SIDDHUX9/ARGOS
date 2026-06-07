@@ -23,6 +23,7 @@ const Risk = lazy(() => import("./pages/Risk.tsx"));
 const Audit = lazy(() => import("./pages/Audit.tsx"));
 const Deploy = lazy(() => import("./pages/Deploy.tsx"));
 const Download = lazy(() => import("./pages/Download.tsx"));
+const Whitepaper = lazy(() => import("./pages/Whitepaper.tsx"));
 
 function RouteLoading() {
   return (
@@ -79,6 +80,7 @@ createRoot(document.getElementById("root")!).render(
                   <Route path="/audit" element={<Audit />} />
                   <Route path="/download" element={<Download />} />
                   <Route path="/deploy" element={<Deploy />} />
+                  <Route path="/whitepaper" element={<Whitepaper />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

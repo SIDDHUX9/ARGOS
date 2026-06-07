@@ -953,6 +953,10 @@ export default function Landing() {
           <span className="font-mono text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>ARGOS v2.0</span>
         </div>
         <div className="flex items-center gap-6">
+          <a href="/whitepaper" className="font-mono text-xs transition-colors" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
+            onMouseEnter={e => { (e.target as HTMLElement).style.color = '#e8e8ed'; }}
+            onMouseLeave={e => { (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.3)'; }}
+          >Whitepaper</a>
           <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="font-mono text-xs transition-colors" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
             onMouseEnter={e => { (e.target as HTMLElement).style.color = '#e8e8ed'; }}
             onMouseLeave={e => { (e.target as HTMLElement).style.color = 'rgba(255,255,255,0.3)'; }}
