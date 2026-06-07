@@ -646,10 +646,18 @@ function ExecutionSection({ prices }: { prices: Map<string, PriceState> }) {
 
 // ─── Main Landing ─────────────────────────────────────────────────────────────
 export default function Landing() {
-  const { isConnected } = useAccount();
+  const { isConnected, isReconnecting } = useAccount();
   const navigate = useNavigate();
+  const prevIsConnected = useRef(isConnected);
   const [prices, setPrices] = useState<Map<string, PriceState>>(priceEngine.getAllStates());
   const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (isConnected && !prevIsConnected.current && !isReconnecting) {
+      navigate('/dashboard');
+    }
+    prevIsConnected.current = isConnected;
+  }, [isConnected, isReconnecting, navigate]);
 
   useEffect(() => {
     setMounted(true);
@@ -709,6 +717,17 @@ export default function Landing() {
             <span className="w-1.5 h-1.5 rounded-full pulse-live" style={{ background: '#30d158' }} />
             <span className="font-mono text-xs" style={{ color: '#30d158' }}>LIVE</span>
           </div>
+          {isConnected && (
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="font-mono text-xs px-4 py-1.5 transition-all"
+              style={{ border: '1px solid #bf5af2', color: '#bf5af2', background: 'transparent' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(191,90,242,0.08)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              [ Dashboard ]
+            </button>
+          )}
           <WalletConnect />
         </div>
       </nav>
@@ -756,7 +775,19 @@ export default function Landing() {
             transition={{ delay: 0.45 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
           >
-            <WalletConnect />
+            {isConnected ? (
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium transition-all"
+                style={{ background: 'rgba(0,240,255,0.08)', border: '1px solid #00f0ff', color: '#00f0ff', borderRadius: 6 }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,240,255,0.15)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,240,255,0.08)'; }}
+              >
+                Go to Dashboard <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <WalletConnect />
+            )}
             <a
               href="#features"
               className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium transition-all"
@@ -876,7 +907,19 @@ export default function Landing() {
                 Access the full ARGOS terminal — live agent swarm, index architect, and autonomous execution engine.
               </p>
               <div className="flex items-center gap-4">
-                <WalletConnect />
+                {isConnected ? (
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="flex items-center gap-2 px-6 py-2.5 text-sm font-medium transition-all"
+                    style={{ background: 'rgba(0,240,255,0.08)', border: '1px solid #00f0ff', color: '#00f0ff', borderRadius: 6 }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,240,255,0.15)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,240,255,0.08)'; }}
+                  >
+                    Go to Dashboard <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <WalletConnect />
+                )}
                 <div className="flex items-center gap-2">
                   <Lock className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.3)' }} />
                   <span className="font-mono text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>EVM wallet required</span>
