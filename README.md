@@ -293,7 +293,7 @@ MIT — see [LICENSE](./LICENSE)
 ---
 
 <div align="center">
-  <strong>ARGOS · Reality Arbitrage Engine · SoSoValue Buildathon 2025</strong><br/>
+  <strong>ARGOS · Reality Arbitrage Engine · SoSoValue Buildathon 2026</strong><br/>
   <em>Bridging macro reality with on-chain execution, one Reality Score at a time.</em>
 </div>
 
